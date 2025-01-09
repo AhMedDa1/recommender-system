@@ -1,73 +1,88 @@
 import pandas as pd
 import numpy as np
-import pickle
-
-
 
 
 class data:
     def __init__(self, path):
         self.path = path
-        self.data = pd.read_csv(path).drop(columns='timestamp')
-
+        self.data = pd.read_csv(path, 
+                                ).drop(columns='timestamp')
         self.data = self.data.to_numpy()
-        
+    
+    def data_structure(self, data, test_size):
+        np.random.shuffle(data)
 
-    def split(self):
-        splitr = 0.2
-        data = self.process(self.data, splitr)
-        user_train, item_train, user_test = data[4], data[5], data[6]
+        user_map, movie_map = {}, {}
+        user_rating, movie_rating = [], []
 
-        return user_train, item_train, user_test
+        data_by_user_train, data_by_user_test = [], []
+        data_by_movie_train, data_by_movie_test = [], []
 
-    def process(self, data, split):
-        splitp = int((1-split) * len(data))
-        user_dict = {}
-        idx_to_user = []
-        item_dict = {}
-        idx_to_item = []
+        user_ids = data[:, 0].tolist()
+        movie_ids = data[:, 1].tolist()
+        ratings = data[:, 2].tolist()
+         
+        for i in range(len(data)):
+            user = user_ids[i]
+            movie = movie_ids[i]
+            rating = ratings[i]
 
-        for idx in range(len(data)):
+            if user not in user_map:
+                user_map[user] = len(user_rating)
+                user_rating.append([])
+                data_by_user_train.append([])
+                data_by_user_test.append([])
 
-            user_id = data[idx][0]
-            item_id = data[idx][1]
+            if movie not in movie_map:
+                movie_map[movie] = len(movie_rating)
+                movie_rating.append([])
+                data_by_movie_train.append([])
+                data_by_movie_test.append([])
 
-            if user_id not in user_dict:
-                idx_to_user.append((user_id))
-                user_dict[(user_id)] = len(user_dict)
-            
-            if item_id not in item_dict:
-                idx_to_item.append((item_id))
-                item_dict[(item_id)]=len(item_dict)
-        
-        user_train = [[] for i in range(len(idx_to_user))]
-        item_train = [[] for i in range(len(idx_to_item))]
+            user_idx = user_map[user]
+            movie_idx = movie_map[movie]
 
-        user_test = [[] for i in range(len(idx_to_user))]
-        item_test = [[] for i in range(len(idx_to_item))]
+            user_rating[user_idx].append((movie, rating))
+            movie_rating[movie_idx].append((user_idx, rating))
 
-        for idx in range(len(data)):
-            
-            user_id = data[idx][0]
-            item_id = data[idx][1]
-            rating  = data[idx][2]
-            user_idx = user_dict[user_id]
-            item_idx = item_dict[item_id]
-
-            if idx < splitp:
-                user_train[user_idx].append((item_idx, float(rating)))
-                item_train[item_idx].append((user_idx, float(rating)))
-
+            if np.random.rand() > test_size:
+                data_by_user_train[user_idx].append((movie, rating))
+                data_by_movie_train[movie_idx].append((user_idx, rating))
             else:
-                user_test[user_idx].append((item_idx, float(rating)))
-                item_test[item_idx].append((user_idx,float(rating)))
+                data_by_user_test[user_idx].append((movie, rating))
+                data_by_movie_test[movie_idx].append((user_idx, rating))
 
-        return (user_dict,
-                idx_to_user,
-                item_dict,
-                idx_to_item,
-                user_train,
-                item_train,
-                user_test,
-                item_test
-               )
+        return (
+            data_by_user_train, data_by_movie_train,
+            data_by_user_test, data_by_movie_test,
+            user_map, movie_map,
+        )
+    
+
+# if __name__ =="__main__":
+#     csv = "Data/ratings_small.csv"
+
+#     data_set = data(csv)
+
+#     train_test_split_results = data_set.data_structure(
+#         data_set.data, test_size=0.2
+#     )
+
+#     (
+#         data_by_user_train,
+#         data_by_movie_train,
+#         data_by_user_test,
+#         data_by_movie_test,
+#         user_map,
+#         movie_map,
+#     ) = train_test_split_results
+
+#     print("Shape of data_by_user_train:", len(data_by_user_train))
+#     print("Shape of data_by_movie_train:", len(data_by_movie_train))
+#     print("Shape of data_by_user_test:", len(data_by_user_test))
+#     print("Shape of data_by_movie_test:", len(data_by_movie_test))
+#     print("Number of users in user_map:", len(user_map))
+#     print("Number of movies in movie_map:", len(movie_map))
+
+
+
